@@ -12,7 +12,8 @@ require 'thread'
 url = URI.parse("http://localhost:3000/messages")
 
 NUM_OF_CONCURRENT_THREADS = 3
-NUM_OF_REQUESTS           = 100
+
+@num_of_requests           = 10
 
 @failed_requests   = 0
 @success_requests  = 0
@@ -21,14 +22,22 @@ NUM_OF_REQUESTS           = 100
 @responce_length = 0
 
 threads = []
+@mutex = Mutex.new
 
-NUM_OF_CONCURRENT_THREADS.times do 
-	thread = Thread.new do
+NUM_OF_CONCURRENT_THREADS.times do |thread_id| 
+	threads << Thread.new(thread_id) do
 		begin
-		  @total_time += Benchmark.realtime do
-		    responce = Net::HTTP.get(url)
-		    @responce_length += responce.length
-		    @success_requests += 1
+      while @num_of_requests > 0 do
+        #print "@num_of_requests - #{@num_of_requests} from #{thread_id}\n"
+  		  @total_time += Benchmark.realtime do
+	  	    responce = Net::HTTP.get(url)
+	        @responce_length += responce.length
+          @success_requests += 1
+
+          @mutex.synchronize do            
+            @num_of_requests -= 1
+          end
+        end
 		  end
 		rescue Errno::ECONNREFUSED => e
 		  p e.message.inspect
@@ -38,7 +47,6 @@ NUM_OF_CONCURRENT_THREADS.times do
 		  @failed_requests += 1
 		end
 	end
-  threads << thread
 end
 
 threads.each{|thread| thread.join}
