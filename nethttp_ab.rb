@@ -1,19 +1,25 @@
 require 'rubygems'
 require 'net/http'
 require 'uri'
-
-require 'nokogiri' # we could follow links on the pages if there's --follow-links=2 option
-
-# nethttperf -n100 -c3 http://localhost/messages
-
+require 'trollop'
 require 'benchmark'
 require 'thread'
+require 'nokogiri' # we could follow links on the pages if there's --follow-links=2 option
 
-url = URI.parse("http://localhost:3000/messages")
+# USAGE:
+# ruby nethttperf.rb -n 100 -c 3 --url http://www.yoursite.com
 
-NUM_OF_CONCURRENT_THREADS = 3
+opts = Trollop::options do
+  opt :concurrent_threads, "Number of concurrent threads", :default => 3, :short => 'c'
+  opt :requests, "Total number of requests", :default => 10, :short => 'n'
+  opt :url, "Url to perform benchmarking on", :type => String
+end
 
-@num_of_requests           = 10
+url = URI.parse(opts[:url])
+
+NUM_OF_CONCURRENT_THREADS = (opts[:concurrent_threads] || 3).to_i
+
+@num_of_requests           = (opts[:requests] || 10).to_i
 
 @failed_requests   = 0
 @success_requests  = 0
