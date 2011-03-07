@@ -1,3 +1,4 @@
+#!/usr/bin/env ruby
 require 'rubygems'
 require 'net/http'
 require 'uri'
@@ -7,15 +8,22 @@ require 'thread'
 require 'nokogiri' # we could follow links on the pages if there's --follow-links=2 option
 
 # USAGE:
-# ruby nethttperf.rb -n 100 -c 3 --url http://www.yoursite.com
+# ./nethttperf.rb -n 100 -c 3 http://www.yoursite.com
 
 opts = Trollop::options do
   opt :concurrent_threads, "Number of concurrent threads", :default => 3, :short => 'c'
   opt :requests, "Total number of requests", :default => 10, :short => 'n'
-  opt :url, "Url to perform benchmarking on", :type => String
 end
 
-url = URI.parse(opts[:url])
+url_to_benchmark = "http://localhost:3000/"
+
+# search for the url to perform benchmarking on
+# we don't use trollop here since I need to specify something like --url=http://mysite.com to get the url
+ARGV.each do |arg|
+  url_to_benchmark = arg if arg =~ /http:\/\/|www\./
+end
+
+url = URI.parse(url_to_benchmark)
 
 NUM_OF_CONCURRENT_THREADS = (opts[:concurrent_threads] || 3).to_i
 
@@ -25,7 +33,7 @@ NUM_OF_CONCURRENT_THREADS = (opts[:concurrent_threads] || 3).to_i
 @success_requests  = 0
 
 @total_time = 0.0
-@responce_length = 0
+@response_length = 0
 
 threads = []
 @mutex = Mutex.new
@@ -37,7 +45,7 @@ NUM_OF_CONCURRENT_THREADS.times do |thread_id|
         #print "@num_of_requests - #{@num_of_requests} from #{thread_id}\n"
   		  @total_time += Benchmark.realtime do
 	  	    responce = Net::HTTP.get(url)
-	        @responce_length += responce.length
+	        @response_length += responce.length
           @success_requests += 1
 
           @mutex.synchronize do            
@@ -58,6 +66,11 @@ end
 threads.each{|thread| thread.join}
 
 print "Failed requests: #{@failed_requests}\n"
+print "Succeeded requests: #{@success_requests}\n\n"
+
+print "Total response length: #{@response_length} bytes\n"
+print "Recieved characters per one page: #{@response_length / @success_requests} bytes\n\n"
+
 printf "Total time: %.03f s\n", @total_time
 printf "Average time per request: %.03f s\n", @total_time / @success_requests.to_f
 printf "Requests per minute: %.01f rpm\n", 1.0 / (@total_time / @success_requests.to_f)

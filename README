@@ -1,1 +1,9 @@
 Simple tool to measure benchmark your app (rpm, response time, etc)
+
+Use like this:
+./nethttperf.rb -n 100 -c 3 http://www.yoursite.com
+
+Options:
+  --concurrent-threads, -c <i>:   Number of concurrent threads (default: 3)
+            --requests, -n <i>:   Total number of requests (default: 10)
+                           url:   Url to perform benchmarking on (default: http://localhost:3000/)
