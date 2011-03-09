@@ -1,4 +1,4 @@
-Simple tool to measure benchmark your app (rpm, response time, etc)
+Simple tool to benchmark sites (rpm, response time, etc)
 
 Use like this:
 ./nethttperf.rb -n 100 -c 3 http://www.yoursite.com

@@ -37,22 +37,23 @@ total_time = 0.0
 response_length = 0
 
 threads = []
-@mutex = Mutex.new
+mutex = Mutex.new
 
-NUM_OF_CONCURRENT_THREADS.times do |thread_id| 
-  threads << Thread.new(thread_id) do
+NUM_OF_CONCURRENT_THREADS.times do
+  threads << Thread.new do
     while !requests_queue.empty? do
-      if requests_queue.lock_next
+      # lock request in order to avoid sharing same request by two threads and making more requests then specified
+      if requests_queue.lock_next_request
         total_time += Benchmark.realtime do
           begin
             response = Net::HTTP.get(url)
-            @mutex.synchronize do
+            mutex.synchronize do
               response_length += response.length
               success_requests += 1
-              requests_queue.release_locked
+              requests_queue.release_locked_request
             end
           rescue Errno::ECONNREFUSED => e
-	    p e.message.inspect
+	    p "Connection error, please check your internet connection or make sure the server is running (it it's local)"
 	    failed_requests += 1
 	  rescue => e
 	    p e.message.inspect
@@ -79,4 +80,4 @@ end
 
 printf "Total time: %.03f s\n", total_time
 printf "Average time per request: %.03f s\n", total_time / success_requests.to_f
-printf "Requests per minute: %.01f rpm\n", 1.0 / (total_time / success_requests.to_f)
+printf "Requests per second: %.01f rps\n", 1.0 / (total_time / success_requests.to_f)
