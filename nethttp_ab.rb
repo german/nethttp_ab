@@ -21,7 +21,7 @@ url_to_benchmark = "http://localhost:3000/"
 # search for the url to perform benchmarking on
 # we don't use trollop here since I don't like to specify --url=http://mysite.com to get the url
 ARGV.each do |arg|
-  url_to_benchmark = arg if arg =~ /http:\/\/|www\./
+  url_to_benchmark = arg if arg =~ /https?:\/\/|www\./
 end
 
 url = URI.parse(url_to_benchmark)
@@ -39,30 +39,48 @@ response_length = 0
 threads = []
 mutex = Mutex.new
 
-NUM_OF_CONCURRENT_THREADS.times do
-  threads << Thread.new do
+NUM_OF_CONCURRENT_THREADS.times do |i|
+  req = Net::HTTP::Get.new(url.path)
+
+  #http.read_timeout = 10
+  #http.open_timeout = 10
+
+  http = Net::HTTP.new(url.host, url.port)
+  if url_to_benchmark =~ /^https:/
+    http.use_ssl = true
+    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+  end
+
+  begin
+    http_opened_session = http.start
+  rescue OpenSSL::SSL::SSLError => e
+    p "The url you provided is wrong, please check is it really ssl encrypted"
+    break
+  rescue Errno::ECONNREFUSED => e
+    p "Connection error, please check your internet connection or make sure the server is running (it it's local)"
+    failed_requests += 1
+  end
+
+  threads << Thread.new(i) do
     while !requests_queue.empty? do
       # lock request in order to avoid sharing same request by two threads and making more requests then specified
       if requests_queue.lock_next_request
         total_time += Benchmark.realtime do
           begin
-            response = Net::HTTP.get(url)
+            response = http_opened_session.request(req)
             mutex.synchronize do
-              response_length += response.length
+              response_length += response.body.length
               success_requests += 1
               requests_queue.release_locked_request
-            end
-          rescue Errno::ECONNREFUSED => e
-	    p "Connection error, please check your internet connection or make sure the server is running (it it's local)"
-	    failed_requests += 1
-	  rescue => e
-	    p e.message.inspect
-	    failed_requests += 1
-	  end
-	end
+            end          
+          rescue => e
+            p 'An error occured: ' + e.message.inspect
+            failed_requests += 1
+          end
+        end
       else
         # exit current thread since there's no available requests in requests_queue
-        Thread.exit
+        Thread.exit      
       end
     end
   end
