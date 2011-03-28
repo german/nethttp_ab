@@ -13,7 +13,7 @@ class SimpleRequestsQueue
     end
   end
 
-  def release_locked_request(url)
+  def release_locked_request(url = nil)
     @num_of_locked -= 1 if @num_of_locked > 0    
     @num_of_requests -= 1 if @num_of_requests > 0
   end

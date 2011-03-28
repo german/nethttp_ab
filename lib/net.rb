@@ -16,7 +16,7 @@ def get_http_session(url)
   rescue OpenSSL::SSL::SSLError => e
     p "The url you provided is wrong, please check is it really ssl encrypted"
   rescue Errno::ECONNREFUSED => e
-    p "Connection error, please check your internet connection or make sure the server is running (it it's local)"
+    p "Connection error, please check your internet connection or make sure the server is running (it's local)"
   end
 
   http_opened_session
