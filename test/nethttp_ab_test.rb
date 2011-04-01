@@ -2,7 +2,7 @@ require 'test/unit'
 require 'net/http'
 require 'mocha'
 
-require File.dirname(File.expand_path(__FILE__)) + '/../nethttp_ab.rb'
+require File.dirname(File.expand_path(__FILE__)) + '/../lib/requester.rb'
 
 class TestResponse < Struct.new(:head, :body, :response_code)
 end
