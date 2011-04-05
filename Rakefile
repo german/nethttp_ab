@@ -1,0 +1,11 @@
+require 'rubygems'
+require 'rake'
+require 'echoe'
+
+Echoe.new('nethttp_ab', '0.0.1') do |p|
+  p.description    = "Simple tool to benchmark sites"
+  p.url            = "http://github.com/german/nethttp_ab"
+  p.author         = "Dmitrii Samoilov"
+  p.email          = "germaninthetown@gmail.com"
+  p.development_dependencies = []
+end

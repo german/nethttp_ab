@@ -3,7 +3,7 @@ require File.dirname(File.expand_path(__FILE__)) + '/../lib/simple_requests_queu
 
 class SimpleRequestQueueTest < Test::Unit::TestCase
   def test_initial
-    queue = SimpleRequestsQueue.new(3)
+    queue = NethttpAb::SimpleRequestsQueue.new(3)
     assert !queue.empty?
 
     3.times { assert queue.lock_next_request }

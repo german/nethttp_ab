@@ -9,7 +9,7 @@ end
 
 class OpenSession
   def request(url)
-    body = File.read(File.join('resources', url.path))
+    body = File.read(File.join(File.dirname(File.expand_path(__FILE__)), 'resources', url.path))
     TestResponse.new("head", body, 200)
   end
 end
@@ -18,7 +18,7 @@ class NetHttpAbTest < Test::Unit::TestCase
   def test_simple
     Net::HTTP.any_instance.stubs(:start).returns(OpenSession.new)
         
-    requester = Requester.new
+    requester = NethttpAb::Requester.new
 
     requester.url = "http://localhost/index.html"
     requester.concurrent_users = 3

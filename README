@@ -1,9 +1,8 @@
 Simple tool to benchmark sites (rpm, response time, etc)
 
-Use like this:
-./nethttperf.rb -n 100 -c 3 http://www.yoursite.com
+SIMPLE USAGE
+3 concurrent threads and 100 total requests:
+nethttp_ab -n 100 -c 3 http://www.yoursite.com
 
-Options:
-  --concurrent-threads, -c <i>:   Number of concurrent threads (default: 3)
-            --requests, -n <i>:   Total number of requests (default: 10)
-                           url:   Url to perform benchmarking on (default: http://localhost:3000/)
+OR simulate user and follow all local links on the page:
+nethttp_ab -f http://localhost:3000

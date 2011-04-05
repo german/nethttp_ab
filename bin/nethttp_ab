@@ -1,12 +1,14 @@
 #!/usr/bin/env ruby
 require 'rubygems'
 require 'trollop'
-require File.dirname(File.expand_path(__FILE__)) + '/lib/requester.rb'
+require File.dirname(File.expand_path(__FILE__)) + '/../lib/requester.rb'
 
-# USAGE:
-# ./nethttp_ab.rb -n 100 -c 3 http://www.yoursite.com
-# OR 
-# ./nethttp_ab.rb --follow_links http://localhost:3000
+# SIMPLE USAGE:
+# 3 concurrent threads and 100 total requests
+# nethttp_ab -n 100 -c 3 http://www.yoursite.com
+#
+# OR simulate user and follow all local links on the page
+# nethttp_ab -f http://localhost:3000
 
 opts = Trollop::options do
   opt :concurrent_threads, "Number of concurrent threads", :default => 3, :short => 'c'
@@ -21,7 +23,7 @@ ARGV.each do |arg|
   url_to_benchmark = arg if arg =~ /https?:\/\/|www\./
 end
 
-requester = Requester.new
+requester = NethttpAb::Requester.new
 requester.concurrent_users  = opts[:concurrent_threads]
 requester.num_of_requests   = opts[:requests]
 requester.follow_links      = opts[:follow_links]

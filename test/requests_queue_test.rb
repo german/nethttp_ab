@@ -5,7 +5,7 @@ class RequestQueueTest < Test::Unit::TestCase
   def test_initial
     urls = ["http://www.google.com", "http://www.ruby-lang.com", "http://www.github.com", "http://www.def-end.com"]
 
-    queue = RequestsQueue.new urls
+    queue = NethttpAb::RequestsQueue.new urls
     assert !queue.empty?
  
     4.times { assert queue.lock_next_request }
