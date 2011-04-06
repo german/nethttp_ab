@@ -1,6 +1,5 @@
 #!/usr/bin/env ruby
 require 'rubygems'
-require 'trollop'
 require File.dirname(File.expand_path(__FILE__)) + '/../lib/requester.rb'
 
 # SIMPLE USAGE:
@@ -10,18 +9,38 @@ require File.dirname(File.expand_path(__FILE__)) + '/../lib/requester.rb'
 # OR simulate user and follow all local links on the page
 # nethttp_ab -f http://localhost:3000
 
-opts = Trollop::options do
-  opt :concurrent_threads, "Number of concurrent threads", :default => 3, :short => 'c'
-  opt :requests, "Total number of requests", :default => 10, :short => 'n'
-  opt :follow_links, "Whether to follow links from received pages (emulating real user)", :default => false, :short => 'f'  
+opts = {}
+
+if ARGV.include?('--follow_links') || ARGV.include?('-f')
+  opts[:follow_links] = true
+else
+  opts[:follow_links] = false
+end
+
+if ARGV.include?('-c')
+  opts[:concurrent_threads] = ARGV[ARGV.index('-c') + 1].to_i
+  ARGV.delete('-c')
+  ARGV.delete(opts[:concurrent_threads])
+else
+  opts[:concurrent_threads] = 3
+end
+
+if ARGV.include?('-n')
+  opts[:requests] = ARGV[ARGV.index('-n') + 1].to_i
+  ARGV.delete('-n')
+  ARGV.delete(opts[:requests])
+else
+  opts[:requests] = 10
 end
 
 url_to_benchmark = "http://localhost:3000/"
+
 # search for the url to perform benchmarking on
-# we don't use trollop here since I don't like to specify --url=http://mysite.com to get the url
 ARGV.each do |arg|
-  url_to_benchmark = arg if arg =~ /https?:\/\/|www\./
+  url_to_benchmark = arg if arg =~ /^(https?:\/\/)?([\w\.]+)\.([a-z]{2,6}\.?)(\/[\w\.]*)*\/?$/
 end
+
+url_to_benchmark = "http://" + url_to_benchmark if url_to_benchmark !~ /^https?:\/\//
 
 requester = NethttpAb::Requester.new
 requester.concurrent_users  = opts[:concurrent_threads]

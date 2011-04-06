@@ -1,6 +1,5 @@
 require 'benchmark'
 require 'thread'
-require 'nokogiri' # we could follow links on the pages if there's --follow-links=2 option
 
 require File.dirname(File.expand_path(__FILE__)) + '/requests_queue'
 require File.dirname(File.expand_path(__FILE__)) + '/simple_requests_queue'
@@ -33,6 +32,8 @@ module NethttpAb
 
     def follow_links=(flag)
       @follow_links = flag
+      # we could follow links on the pages if there's --follow-links=2 option
+      require 'nokogiri'  if @follow_links
     end
 
     def url=(link)
@@ -72,6 +73,9 @@ module NethttpAb
           rescue Errno::ECONNREFUSED => e
             puts("Connection error, please check your internet connection or make sure the server is running (it's local)")
             exit
+          rescue SocketError => e
+            puts e.message
+            exit
           end
 
           req = Net::HTTP::Get.new(@url.path)
@@ -93,10 +97,13 @@ module NethttpAb
           begin
             http_opened_session = get_http_session(@url)
           rescue OpenSSL::SSL::SSLError => e
-            puts("The url you provided is wrong, please check is it really ssl encrypted")
+            puts "The url you provided is wrong, please check is it really ssl encrypted"
             exit
           rescue Errno::ECONNREFUSED => e
-            puts("Connection error, please check your internet connection or make sure the server is running (it's local)")
+            puts "Connection error, please check your internet connection or make sure the server is running (it's local)"
+            exit
+          rescue SocketError => e
+            puts e.message
             exit
           end
 

@@ -1,0 +1,3 @@
+v0.0.2 deleted trollop gem as a requirement, added nokogiri dependency to gemspec, added MIT license file, fixed small issue with benchmarked site's url, added wrong site address handling  [06-04-2011]
+
+v0.0.1. first release [05-04-2011]
