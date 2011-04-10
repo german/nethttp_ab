@@ -15,19 +15,31 @@ class OpenSession
 end
 
 class NetHttpAbTest < Test::Unit::TestCase
-  def test_simple
+  def setup
     Net::HTTP.any_instance.stubs(:start).returns(OpenSession.new)
-        
-    requester = NethttpAb::Requester.new
+    @requester = NethttpAb::Requester.new
+  end
 
-    requester.url = "http://localhost/index.html"
-    requester.concurrent_users = 3
-    requester.num_of_requests = 10
-    requester.follow_links = false
+  def test_simple
+    @requester.url = "http://localhost/index.html"
+    @requester.concurrent_users = 3
+    @requester.num_of_requests = 10
+    @requester.follow_links = false
 
-    requester.proceed
+    @requester.proceed
 
-    assert_equal 10, requester.successfull_requests
-    assert_equal 0, requester.failed_requests
+    assert_equal 10, @requester.successfull_requests
+    assert_equal 0, @requester.failed_requests
+  end
+
+  def test_follow_links
+    @requester.url = "http://localhost/links.html"
+    @requester.concurrent_users = 3
+    @requester.follow_links = true
+
+    @requester.proceed
+
+    assert_equal 5, @requester.successfull_requests
+    assert_equal 0, @requester.failed_requests
   end
 end
