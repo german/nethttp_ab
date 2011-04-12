@@ -1,8 +1,17 @@
 Simple tool to benchmark sites (rpm, response time, etc)
 
-SIMPLE USAGE
-3 concurrent threads and 100 total requests:
-nethttp_ab -n 100 -c 3 http://www.yoursite.com
+EXAMPLES:
 
-OR simulate user and follow all local links on the page:
+3 concurrent threads and 100 total requests:
+nethttp_ab -n100 -c3 http://www.yoursite.com
+
+OR simulate one user and follow all local links on the page:
 nethttp_ab -f http://localhost:3000
+
+simulate 3 users (all local links on the page will be visited once)
+nethttp_ab --follow_links -c3 http://localhost:3000
+
+Issue tracker: https://github.com/german/nethttp_ab/issues
+
+
+Copyright © 2011 Dmitrii Samoilov, released under the MIT license

@@ -1,3 +1,5 @@
+v0.0.3 fixed a bug in url regexp and added a test suite to cover it, also added a test suite for --follow-links option, changed the way options are parsed - now it's possible to specify both "-n100 -c20" and "-n  100 -c 25"
+
 v0.0.2 deleted trollop gem as a requirement, added nokogiri dependency to gemspec, added MIT license file, fixed small issue with benchmarked site's url, added wrong site address handling  [06-04-2011]
 
 v0.0.1. first release [05-04-2011]

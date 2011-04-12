@@ -12,6 +12,8 @@ module NethttpAb
     attr_accessor :successfull_requests
     attr_accessor :failed_requests
 
+    URL_REGEXP = /^(https?:\/\/)?(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,4}/
+
     def initialize
       @response_length = 0
       @total_time = 0.0
@@ -100,7 +102,7 @@ module NethttpAb
             puts "The url you provided is wrong, please check is it really ssl encrypted"
             exit
           rescue Errno::ECONNREFUSED => e
-            puts "Connection error, please check your internet connection or make sure the server is running (it's local)"
+            puts "Connection error, please check your internet connection or make sure the server is responding"
             exit
           rescue SocketError => e
             puts e.message
@@ -118,9 +120,13 @@ module NethttpAb
                   Net::HTTP::Get.new(@url.path)
                 end
 
+                # TODO
+                #req.add_field "User-Agent", "Mozilla/5.0 (X11; U; Linux i686; en-US) AppleWebKit/534.16 (KHTML, like Gecko) Chrome/10.0.648.204 Safari/534.16"
+
                 @total_time += Benchmark.realtime do
                   begin
                     response = http_opened_session.request(req)
+
                     @mutex.synchronize do
                       @response_length += response.body.length
                       @successfull_requests += 1

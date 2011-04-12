@@ -4,10 +4,13 @@ require File.dirname(File.expand_path(__FILE__)) + '/../lib/requester.rb'
 
 # SIMPLE USAGE:
 # 3 concurrent threads and 100 total requests
-# nethttp_ab -n 100 -c 3 http://www.yoursite.com
+# nethttp_ab -n100 -c3 http://www.yoursite.com
 #
-# OR simulate user and follow all local links on the page
+# OR simulate one user and follow all local links on the page
 # nethttp_ab -f http://localhost:3000
+#
+# simulate 3 users (all local links on the page will be visited once)
+# nethttp_ab --follow_links -c3 http://localhost:3000
 
 opts = {}
 
@@ -17,27 +20,23 @@ else
   opts[:follow_links] = false
 end
 
-if ARGV.include?('-c')
-  opts[:concurrent_threads] = ARGV[ARGV.index('-c') + 1].to_i
-  ARGV.delete('-c')
-  ARGV.delete(opts[:concurrent_threads])
+if ARGV.join.match(/-c\s*(\d*)/)
+  opts[:concurrent_threads] = $1.to_i
 else
-  opts[:concurrent_threads] = 3
+  opts[:concurrent_threads] = 1
 end
 
-if ARGV.include?('-n')
-  opts[:requests] = ARGV[ARGV.index('-n') + 1].to_i
-  ARGV.delete('-n')
-  ARGV.delete(opts[:requests])
+if ARGV.join.match(/-n\s*(\d*)/)
+  opts[:requests] = $1.to_i
 else
   opts[:requests] = 10
 end
 
 url_to_benchmark = "http://localhost:3000/"
 
-# search for the url to perform benchmarking on
+# search in ARGV for the url to perform benchmarking on
 ARGV.each do |arg|
-  url_to_benchmark = arg if arg =~ /^(https?:\/\/)?([\w\.]+)\.([a-z]{2,6}\.?)(\/[\w\.]*)*\/?$/
+  url_to_benchmark = arg if arg =~ NethttpAb::Requester::URL_REGEXP
 end
 
 url_to_benchmark = "http://" + url_to_benchmark if url_to_benchmark !~ /^https?:\/\//

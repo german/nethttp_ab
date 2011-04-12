@@ -1,4 +1,5 @@
 CHANGELOG
+Gemfile
 LICENSE
 Manifest
 README
@@ -12,4 +13,11 @@ nethttp_ab.gemspec
 test/nethttp_ab_test.rb
 test/requests_queue_test.rb
 test/resources/index.html
+test/resources/links.html
+test/resources/links1.html
+test/resources/links2.html
+test/resources/links3.html
+test/resources/links4.html
+test/resources/links5.html
 test/simple_requests_queue_test.rb
+test/url_regexp_test.rb
