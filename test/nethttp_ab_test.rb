@@ -1,23 +1,39 @@
 require 'test/unit'
 require 'net/http'
-require 'mocha'
 
 require File.dirname(File.expand_path(__FILE__)) + '/../lib/requester.rb'
 
-class TestResponse < Struct.new(:head, :body, :response_code)
-end
-
-class OpenSession
-  def request(url)
-    body = File.read(File.join(File.dirname(File.expand_path(__FILE__)), 'resources', url.path))
-    TestResponse.new("head", body, 200)
-  end
-end
-
 class NetHttpAbTest < Test::Unit::TestCase
+
+  class TestResponse < Struct.new(:head, :body, :response_code)
+  end
+
+  class MySocketStub
+    def initialize(body)
+      @body = body
+    end
+
+    def closed?
+      false
+    end
+
+    def read_all(from)
+      @body
+    end
+  end
+
   def setup
-    Net::HTTP.any_instance.stubs(:start).returns(OpenSession.new)
     @requester = NethttpAb::Requester.new
+
+    Net::HTTP.instance_eval do
+      def self.get_response(url)
+        body = File.read(File.join(File.dirname(File.expand_path(__FILE__)), 'resources', url.path))     
+        resp = Net::HTTPOK.new(Net::HTTP.version_1_2, '200', '')
+        resp.reading_body(MySocketStub.new(body), true){}
+        resp.body = body
+        resp
+      end
+    end
   end
 
   def test_simple
