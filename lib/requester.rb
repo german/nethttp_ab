@@ -1,18 +1,21 @@
 require 'benchmark'
 require 'thread'
+require 'net/http'
 
 require File.dirname(File.expand_path(__FILE__)) + '/requests_queue'
 require File.dirname(File.expand_path(__FILE__)) + '/simple_requests_queue'
-require File.dirname(File.expand_path(__FILE__)) + '/net'
 
 module NethttpAb
   class Requester
-    include NethttpAb::Utility
 
     attr_accessor :successfull_requests
     attr_accessor :failed_requests
 
-    URL_REGEXP = /^(https?:\/\/)?(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,4}/
+    #URL_REGEXP = /^(https?:\/\/)?(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,4}/
+
+    # list of all available TLD domains
+    # http://data.iana.org/TLD/tlds-alpha-by-domain.txt
+    URL_REGEXP = /^(https?:\/\/)?(?:[a-zA-Z0-9-]+\.)+(AC|AD|AE|AERO|AF|AG|AI|AL|AM|AN|AO|AQ|AR|ARPA|AS|ASIA|AT|AU|AW|AX|AZ|BA|BB|BD|BE|BF|BG|BH|BI|BIZ|BJ|BM|BN|BO|BR|BS|BT|BV|BW|BY|BZ|CA|CAT|CC|CD|CF|CG|CH|CI|CK|CL|CM|CN|CO|COM|COOP|CR|CU|CV|CX|CY|CZ|DE|DJ|DK|DM|DO|DZ|EC|EDU|EE|EG|ER|ES|ET|EU|FI|FJ|FK|FM|FO|FR|GA|GB|GD|GE|GF|GG|GH|GI|GL|GM|GN|GOV|GP|GQ|GR|GS|GT|GU|GW|GY|HK|HM|HN|HR|HT|HU|ID|IE|IL|IM|IN|INFO|INT|IO|IQ|IR|IS|IT|JE|JM|JO|JOBS|JP|KE|KG|KH|KI|KM|KN|KP|KR|KW|KY|KZ|LA|LB|LC|LI|LK|LR|LS|LT|LU|LV|LY|MA|MC|MD|ME|MG|MH|MIL|MK|ML|MM|MN|MO|MOBI|MP|MQ|MR|MS|MT|MU|MUSEUM|MV|MW|MX|MY|MZ|NA|NAME|NC|NE|NET|NF|NG|NI|NL|NO|NP|NR|NU|NZ|OM|ORG|PA|PE|PF|PG|PH|PK|PL|PM|PN|PR|PRO|PS|PT|PW|PY|QA|RE|RO|RS|RU|RW|SA|SB|SC|SD|SE|SG|SH|SI|SJ|SK|SL|SM|SN|SO|SR|ST|SU|SV|SY|SZ|TC|TD|TEL|TF|TG|TH|TJ|TK|TL|TM|TN|TO|TP|TR|TRAVEL|TT|TV|TW|TZ|UA|UG|UK|US|UY|UZ|VA|VC|VE|VG|VI|VN|VU|WF|WS|YE|YT|ZA|ZM|ZW)(\?|\Z|\/)(.*)?/i
 
     def initialize
       @response_length = 0
@@ -44,6 +47,7 @@ module NethttpAb
     end
 
     def print_stats
+      puts
       print "Failed requests: #{@failed_requests}\n"
       print "Succeeded requests: #{@successfull_requests}\n\n"
 
@@ -67,27 +71,58 @@ module NethttpAb
       def prepare_queue
         @requests_queue = if @follow_links
           # get all links to benchmark as user behavior
-          begin
-            http_opened_session = get_http_session(@url)
+          response = begin
+            Net::HTTP.get_response(@url)
           rescue OpenSSL::SSL::SSLError => e
             puts("The url you provided is wrong, please check is it really ssl encrypted")
             exit
           rescue Errno::ECONNREFUSED => e
             puts("Connection error, please check your internet connection or make sure the server is running (it's local)")
             exit
+          rescue Timeout::Error => e
+            puts("Timeout error: please check the site you're benchmarking")
+            exit          
           rescue SocketError => e
             puts e.message
             exit
           end
-
-          req = Net::HTTP::Get.new(@url.path)
-          response = http_opened_session.request(req)
+          
+          response = case response
+            when Net::HTTPSuccess
+              response
+            when Net::HTTPRedirection
+              print "redirected to #{response['location']}\n"
+              # we must correct the url, so we could select right inner links then
+              # consider this: you request www.example.com and it redirects you to example.com
+              # but the @url.host will be still www.example.com, so href.match(Regexp.escape(@url.host)) later will fail
+              self.url = response['location']
+              Net::HTTP.get_response(@url)
+          end
+          
           doc = Nokogiri::HTML(response.body)
-          #puts doc.css('a').map{|el| el.attr('href')}.inspect
-          local_links = doc.css('a').reject{|el| el.attr('rel') == 'nofollow'}.select{|el| el.attr('href').match(Regexp.escape(@url.host)) || (el.attr('href') !~ /^(http|www|javascript)/) }
-          local_links.map!{|el| el.attr('href')}
+
+          local_links = doc.css('a').reject{|el| el.attr('rel') == 'nofollow' || el.attr('href') =~ /^javascript/ || el.attr('onclick')}
+
+          local_links.map!{|el| el.attr('href') }
+
+          local_links = local_links.select{|href| href.match(Regexp.escape(@url.host)) || href !~ URL_REGEXP }
+
+          # we assume that local_links now contains only links inner to tested site
+          local_links.map! do |href|
+            # we must construct a proper url which then could be parsed by URI.parse
+            if !href.match(Regexp.escape(@url.host))
+              href = if (href[0] == '/' && @url.host[-1] != '/') || (href[0] != '/' && @url.host[-1] == '/')
+                "#{@url.scheme}://#{@url.host}#{href}"
+              else
+                "#{@url.scheme}://#{@url.host}/#{href}"
+              end
+            else
+              href
+            end             
+          end
           local_links.uniq!
-          print "Found #{local_links.inspect} local links\n"
+
+          print "Found #{local_links.size} local links: #{local_links.inspect}\n"
           NethttpAb::RequestsQueue.new(local_links)
         else
           NethttpAb::SimpleRequestsQueue.new(@num_of_requests)         
@@ -96,18 +131,18 @@ module NethttpAb
 
       def start_threads
         @concurrent_users.times do
-          begin
-            http_opened_session = get_http_session(@url)
-          rescue OpenSSL::SSL::SSLError => e
-            puts "The url you provided is wrong, please check is it really ssl encrypted"
-            exit
-          rescue Errno::ECONNREFUSED => e
-            puts "Connection error, please check your internet connection or make sure the server is responding"
-            exit
-          rescue SocketError => e
-            puts e.message
-            exit
-          end
+          #begin
+          #  http_opened_session = get_http_session(@url)
+          #rescue OpenSSL::SSL::SSLError => e
+          #  puts "The url you provided is wrong, please check is it really ssl encrypted"
+          #  exit
+          #rescue Errno::ECONNREFUSED => e
+          #  puts "Connection error, please check your internet connection or make sure the server is responding"
+          #  exit
+          #rescue SocketError => e
+          #  puts e.message
+          #  exit
+          #end
 
           @threads << Thread.new do
             while !@requests_queue.empty? do
@@ -115,9 +150,10 @@ module NethttpAb
               if next_url = @requests_queue.lock_next_request
                 req = if @follow_links
                   next_url_parsed = URI.parse(next_url)
-                  Net::HTTP::Get.new(next_url_parsed.path)
+                  next_url_parsed.path = '/' if next_url_parsed.path == "" # ensure we requesting main page (if url is like http://google.com)
+                  next_url_parsed
                 else
-                  Net::HTTP::Get.new(@url.path)
+                  @url
                 end
 
                 # TODO
@@ -125,12 +161,20 @@ module NethttpAb
 
                 @total_time += Benchmark.realtime do
                   begin
-                    response = http_opened_session.request(req)
+                    response = Net::HTTP.get_response(req) #http_opened_session.request(req)
+                    response = case response
+                      when Net::HTTPSuccess
+                        response
+                      when Net::HTTPRedirection
+                        print "redirected to #{response['location']}\n"
+                        Net::HTTP.get_response(URI.parse(response['location']))
+                    end
+                    
+                    print '.' # show progress while processing queue
 
                     @mutex.synchronize do
                       @response_length += response.body.length
-                      @successfull_requests += 1
-                      @requests_queue.release_locked_request(next_url)
+                      @successfull_requests += 1                      
                     end 
                   rescue Net::HTTPBadResponse => e
                     print "An error occured: #{e.message}\n"
@@ -141,6 +185,8 @@ module NethttpAb
                   rescue => e
                     print "An error occured: #{e.message}\n"
                     @failed_requests += 1
+                  ensure
+                    @requests_queue.release_locked_request(next_url)
                   end
                 end
               else
