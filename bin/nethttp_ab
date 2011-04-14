@@ -14,23 +14,11 @@ require File.dirname(File.expand_path(__FILE__)) + '/../lib/requester.rb'
 
 opts = {}
 
-if ARGV.include?('--follow_links') || ARGV.include?('-f')
-  opts[:follow_links] = true
-else
-  opts[:follow_links] = false
-end
+opts[:follow_links] = ARGV.include?('--follow_links') || ARGV.include?('-f')
 
-if ARGV.join.match(/-c\s*(\d*)/)
-  opts[:concurrent_threads] = $1.to_i
-else
-  opts[:concurrent_threads] = 1
-end
+opts[:concurrent_threads] = ARGV.join.match(/-c\s*(\d*)/) ? $1.to_i : 1
 
-if ARGV.join.match(/-n\s*(\d*)/)
-  opts[:requests] = $1.to_i
-else
-  opts[:requests] = 10
-end
+opts[:requests] = ARGV.join.match(/-n\s*(\d*)/) ? $1.to_i : 10
 
 url_to_benchmark = "http://localhost:3000/"
 
