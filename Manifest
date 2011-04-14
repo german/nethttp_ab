@@ -5,7 +5,6 @@ Manifest
 README
 Rakefile
 bin/nethttp_ab
-lib/net.rb
 lib/requester.rb
 lib/requests_queue.rb
 lib/simple_requests_queue.rb

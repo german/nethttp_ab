@@ -1,7 +1,24 @@
-v0.0.4 added correct dependencies to the nethttp_ab.gemspec file [12-04-2011]
+v0.0.5 [15-04-2011]
+* fixed issue #1 ("HTTP request path is empty")
+* following the redirect (if any) on the first request (using Net::HTTP.get_response instead of Net::HTTP::Get) so deleted net.rb file
+* casting all local_links to the standart URL view after first request if option --follow-links
+* removed mocha dependency and rewritten all test suites from nethttp_ab_test.rb with Net::HTTP.get_response overridden
+* changed NethttpAb::Requester::URL_REGEXP (added a white-list of available TLDs)
 
-v0.0.3 fixed a bug in url regexp and added a test suite to cover it, also added a test suite for --follow-links option, changed the way options are parsed - now it's possible to specify both "-n100 -c20" and "-n  100 -c 25" [12-04-2011]
+v0.0.4 [12-04-2011]
+* added correct dependencies to the nethttp_ab.gemspec file 
 
-v0.0.2 deleted trollop gem as a requirement, added nokogiri dependency to gemspec, added MIT license file, fixed small issue with benchmarked site's url, added wrong site address handling  [06-04-2011]
+v0.0.3 [12-04-2011]
+* fixed a bug in url regexp and added a test suite to cover it
+* also added a test suite for --follow-links option
+* changed the way options are parsed - now it's possible to specify both "-n100 -c20" and "-n  100 -c 25"
 
-v0.0.1. first release [05-04-2011]
+v0.0.2 [06-04-2011]
+* deleted trollop gem as a requirement
+* added nokogiri dependency to gemspec
+* added MIT license file
+* fixed small issue with benchmarked site's url
+* added wrong site address handling
+
+v0.0.1. [05-04-2011]
+* first release, w00t!
