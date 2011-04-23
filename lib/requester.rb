@@ -68,6 +68,31 @@ module NethttpAb
 
     private
 
+      def extract_links_from(doc)
+        doc.css('a').reject{|el| el.attr('rel') == 'nofollow' || el.attr('href') =~ /^javascript/ || el.attr('onclick')}
+      end
+
+      def select_local_links_from(all_links)
+        all_links.map!{|el| el.attr('href') }
+
+        local_links = all_links.select{|href| href.match(Regexp.escape(@url.host)) || href !~ URL_REGEXP }
+
+        # we assume that local_links now contains only links inner to tested site
+        local_links.map! do |href|
+          # we must construct a proper url which then could be parsed by URI.parse
+          if !href.match(Regexp.escape(@url.host))
+            href = if (href[0] == '/' && @url.host[-1] != '/') || (href[0] != '/' && @url.host[-1] == '/')
+              "#{@url.scheme}://#{@url.host}#{href}"
+            else
+              "#{@url.scheme}://#{@url.host}/#{href}"
+            end
+          else
+            href
+          end             
+        end
+        local_links.uniq
+      end
+
       def prepare_queue
         @requests_queue = if @follow_links
           # get all links to benchmark as user behavior
@@ -100,27 +125,8 @@ module NethttpAb
           end
           
           doc = Nokogiri::HTML(response.body)
-
-          local_links = doc.css('a').reject{|el| el.attr('rel') == 'nofollow' || el.attr('href') =~ /^javascript/ || el.attr('onclick')}
-
-          local_links.map!{|el| el.attr('href') }
-
-          local_links = local_links.select{|href| href.match(Regexp.escape(@url.host)) || href !~ URL_REGEXP }
-
-          # we assume that local_links now contains only links inner to tested site
-          local_links.map! do |href|
-            # we must construct a proper url which then could be parsed by URI.parse
-            if !href.match(Regexp.escape(@url.host))
-              href = if (href[0] == '/' && @url.host[-1] != '/') || (href[0] != '/' && @url.host[-1] == '/')
-                "#{@url.scheme}://#{@url.host}#{href}"
-              else
-                "#{@url.scheme}://#{@url.host}/#{href}"
-              end
-            else
-              href
-            end             
-          end
-          local_links.uniq!
+          
+          local_links = select_local_links_from extract_links_from(doc)
 
           print "Found #{local_links.size} local links: #{local_links.inspect}\n"
           NethttpAb::RequestsQueue.new(local_links)

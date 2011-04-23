@@ -5,9 +5,6 @@ require File.dirname(File.expand_path(__FILE__)) + '/../lib/requester.rb'
 
 class NetHttpAbTest < Test::Unit::TestCase
 
-  class TestResponse < Struct.new(:head, :body, :response_code)
-  end
-
   class MySocketStub
     def initialize(body)
       @body = body

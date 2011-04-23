@@ -4,7 +4,7 @@ require File.dirname(File.expand_path(__FILE__)) + '/../lib/requester.rb'
 
 class UrlRegexpTest < Test::Unit::TestCase
   def setup
-    @fail_urls = %w{www./yandex.ru yandex.123ru germaninthetown@gmail.com abcde}
+    @fail_urls = %w{www./yandex.ru yandex.123ru germaninthetown@gmail.com abcde index.html}
 
     @correct_urls = %w{www.google.com google.com http://google.com http://mail.ya.ru mail.ya.ru/ mail.ya.ru/test http://www.my-site.org/articles/2011/04/12/123-nethttpab-is-great}
   end
