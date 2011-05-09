@@ -24,7 +24,7 @@ class NetHttpAbTest < Test::Unit::TestCase
 
     Net::HTTP.instance_eval do
       def self.get_response(url)
-        body = File.read(File.join(File.dirname(File.expand_path(__FILE__)), 'resources', url.path))     
+        body = File.read(File.join(File.dirname(File.expand_path(__FILE__)), 'resources', url.path))
         resp = Net::HTTPOK.new(Net::HTTP.version_1_2, '200', '')
         resp.reading_body(MySocketStub.new(body), true){}
         resp.body = body
@@ -55,4 +55,17 @@ class NetHttpAbTest < Test::Unit::TestCase
     assert_equal 5, @requester.successfull_requests
     assert_equal 0, @requester.failed_requests
   end
+
+  def test_follow_links_depth_2
+    @requester.url = "http://localhost/links_depth_2.html"
+    @requester.concurrent_users = 3
+    @requester.follow_links = true
+    @requester.follow_links_depth = 2
+
+    @requester.proceed
+
+    assert_equal 9, @requester.successfull_requests
+    assert_equal 0, @requester.failed_requests
+  end
+
 end
