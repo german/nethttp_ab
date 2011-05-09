@@ -43,7 +43,7 @@ module NethttpAb
     end
 
     def follow_links_depth=(depth)
-      follow_links = true
+      self.follow_links = true # set follow_links flag to true (if cli option was -f2 for example)
       @follow_links_depth = depth
     end
 
