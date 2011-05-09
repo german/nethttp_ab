@@ -1,6 +1,7 @@
 v0.0.6 [09-05-2011]
 * added an ability to set a follow_links depth level to simulate a real user
-* refactored code a bit
+* added verbose option
+* refactored code a bit, fixed some errors
 
 v0.0.5 [15-04-2011]
 * fixed issue #1 ("HTTP request path is empty")

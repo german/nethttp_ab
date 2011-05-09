@@ -18,9 +18,11 @@ opts[:follow_links] = ARGV.include?('--follow_links') || ARGV.include?('-f')
 
 opts[:concurrent_threads] = ARGV.join.match(/-c\s*(\d*)/) ? $1.to_i : 1
 
-opts[:follow_links_depth] = ARGV.join.match(/-f\s*(\d*)/) ? $1.to_i : 1
+opts[:follow_links_depth] = ARGV.join.match(/-f\s*(\d*)/) ? $1.to_i : 0
 
 opts[:requests] = ARGV.join.match(/-n\s*(\d*)/) ? $1.to_i : 10
+
+opts[:verbose] = ARGV.include?('--verbose') || ARGV.include?('-v')
 
 url_to_benchmark = "http://localhost:3000/"
 
@@ -32,10 +34,12 @@ end
 url_to_benchmark = "http://" + url_to_benchmark if url_to_benchmark !~ /^https?:\/\//
 
 requester = NethttpAb::Requester.new
+requester.verbose           = opts[:verbose]
 requester.concurrent_users  = opts[:concurrent_threads]
 requester.num_of_requests   = opts[:requests]
 requester.follow_links      = opts[:follow_links]
 requester.follow_links_depth= opts[:follow_links_depth]
+
 requester.url               = url_to_benchmark
 
 requester.proceed

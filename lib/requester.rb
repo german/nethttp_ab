@@ -26,6 +26,11 @@ module NethttpAb
       @successfull_requests  = 0
       @follow_links = false
       @follow_links_depth = 1
+      @verbose = false
+    end
+
+    def verbose=(flag)
+      @verbose = flag
     end
 
     def concurrent_users=(num)
@@ -39,12 +44,15 @@ module NethttpAb
     def follow_links=(flag)
       @follow_links = flag
       # we could follow links on the pages if there's --follow-links=2 option
+      puts 'follow_links mode' if @verbose && @follow_links
       require 'nokogiri' if @follow_links
     end
 
     def follow_links_depth=(depth)
-      self.follow_links = true # set follow_links flag to true (if cli option was -f2 for example)
-      @follow_links_depth = depth
+      if depth > 0
+        self.follow_links = true # set follow_links flag to true (if cli option was -f2 for example)
+        @follow_links_depth = depth
+      end
     end
 
     def url=(link)
@@ -126,7 +134,7 @@ module NethttpAb
           puts e.message
           exit
         end
-          
+
         response = case response
           when Net::HTTPSuccess
             response
@@ -137,8 +145,10 @@ module NethttpAb
             # but the @url.host will be still www.example.com, so href.match(Regexp.escape(@url.host)) later will fail
             self.url = response['location']
             Net::HTTP.get_response(url)
+          when Net::HTTPNotFound
+            return []
         end
-          
+
         doc = ::Nokogiri::HTML(response.body)
         links = select_local_links_from extract_links_from(doc), url
         local_links += links
@@ -148,6 +158,8 @@ module NethttpAb
             local_links << fetch_links_from(URI.parse(link), max_depth, (current_depth + 1))
           end
         end
+        
+        puts "current_depth - #{current_depth}, local_links - #{local_links.inspect}" if @verbose
 
         local_links.reject{|l| l.empty?}.flatten.uniq
       end

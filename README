@@ -15,6 +15,10 @@ nethttp_ab -f2 http://localhost:3000
 OR simulate 3 users (all local links on the page will be visited once)
 nethttp_ab --follow_links -c3 http://localhost:3000
 
+
+Also you could add --verbose or -v option to check which urls being requested in follow_links mode.
+
+
 Issue tracker: https://github.com/german/nethttp_ab/issues
 
 
