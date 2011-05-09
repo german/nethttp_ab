@@ -25,6 +25,7 @@ module NethttpAb
       @failed_requests   = 0
       @successfull_requests  = 0
       @follow_links = false
+      @follow_links_depth = 1
     end
 
     def concurrent_users=(num)
@@ -39,6 +40,10 @@ module NethttpAb
       @follow_links = flag
       # we could follow links on the pages if there's --follow-links=2 option
       require 'nokogiri'  if @follow_links
+    end
+
+    def follow_links_depth=(depth)
+      @follow_links = depth
     end
 
     def url=(link)
@@ -72,19 +77,27 @@ module NethttpAb
         doc.css('a').reject{|el| el.attr('rel') == 'nofollow' || el.attr('href') =~ /^javascript/ || el.attr('onclick')}
       end
 
-      def select_local_links_from(all_links)
+      def select_local_links_from(all_links, parent_url_parsed)
         all_links.map!{|el| el.attr('href') }
 
-        local_links = all_links.select{|href| href.match(Regexp.escape(@url.host)) || href !~ URL_REGEXP }
+        local_links = all_links.select{|href| href.match(Regexp.escape(parent_url_parsed.host)) || href !~ URL_REGEXP }
 
         # we assume that local_links now contains only links inner to tested site
         local_links.map! do |href|
-          # we must construct a proper url which then could be parsed by URI.parse
-          if !href.match(Regexp.escape(@url.host))
-            href = if (href[0] == '/' && @url.host[-1] != '/') || (href[0] != '/' && @url.host[-1] == '/')
-              "#{@url.scheme}://#{@url.host}#{href}"
+          # a proper url should be constructed which then could be parsed by URI.parse
+          if !href.match(Regexp.escape(parent_url_parsed.host))
+
+            # relative links should be treated respectively
+            path = if parent_url_parsed.path.count('/') > 1
+              parent_url_parsed.path.gsub(parent_url_parsed.path[parent_url_parsed.path.rindex('/')..-1], '')
             else
-              "#{@url.scheme}://#{@url.host}/#{href}"
+              ''
+            end
+
+            href = if (href[0] == '/' && parent_url_parsed.host[-1] != '/') || (href[0] != '/' && parent_url_parsed.host[-1] == '/')
+              "#{parent_url_parsed.scheme}://#{parent_url_parsed.host}#{path}#{href}"
+            else
+              "#{parent_url_parsed.scheme}://#{parent_url_parsed.host}#{path}/#{href}"
             end
           else
             href
@@ -93,41 +106,54 @@ module NethttpAb
         local_links.uniq
       end
 
+      def fetch_links_from(url, max_depth = 1, current_depth = 0)
+        local_links = []
+
+        # get all links to benchmark as user behavior
+        response = begin
+          Net::HTTP.get_response(url)
+        rescue OpenSSL::SSL::SSLError => e
+          puts("The url you provided is wrong, please check is it really ssl encrypted")
+          exit
+        rescue Errno::ECONNREFUSED => e
+          puts("Connection error, please check your internet connection or make sure the server is running (it's local)")
+          exit
+        rescue Timeout::Error => e
+          puts("Timeout error: please check the site you're benchmarking")
+          exit          
+        rescue SocketError => e
+          puts e.message
+          exit
+        end
+          
+        response = case response
+          when Net::HTTPSuccess
+            response
+          when Net::HTTPRedirection
+            print "redirected to #{response['location']}\n"
+            # we must correct the url, so we could select right inner links then
+            # consider this: you request www.example.com and it redirects you to example.com
+            # but the @url.host will be still www.example.com, so href.match(Regexp.escape(@url.host)) later will fail
+            self.url = response['location']
+            Net::HTTP.get_response(url)
+        end
+          
+        doc = Nokogiri::HTML(response.body)
+        links = select_local_links_from extract_links_from(doc), url
+        local_links += links
+
+        if max_depth > current_depth
+          links.each do |link|
+            local_links << fetch_links_from(URI.parse(link), max_depth, (current_depth + 1))
+          end
+        end
+
+        local_links.reject{|l| l.empty?}.flatten
+      end
+
       def prepare_queue
         @requests_queue = if @follow_links
-          # get all links to benchmark as user behavior
-          response = begin
-            Net::HTTP.get_response(@url)
-          rescue OpenSSL::SSL::SSLError => e
-            puts("The url you provided is wrong, please check is it really ssl encrypted")
-            exit
-          rescue Errno::ECONNREFUSED => e
-            puts("Connection error, please check your internet connection or make sure the server is running (it's local)")
-            exit
-          rescue Timeout::Error => e
-            puts("Timeout error: please check the site you're benchmarking")
-            exit          
-          rescue SocketError => e
-            puts e.message
-            exit
-          end
-          
-          response = case response
-            when Net::HTTPSuccess
-              response
-            when Net::HTTPRedirection
-              print "redirected to #{response['location']}\n"
-              # we must correct the url, so we could select right inner links then
-              # consider this: you request www.example.com and it redirects you to example.com
-              # but the @url.host will be still www.example.com, so href.match(Regexp.escape(@url.host)) later will fail
-              self.url = response['location']
-              Net::HTTP.get_response(@url)
-          end
-          
-          doc = Nokogiri::HTML(response.body)
-          
-          local_links = select_local_links_from extract_links_from(doc)
-
+          local_links = fetch_links_from(@url, @follow_links_depth)
           print "Found #{local_links.size} local links: #{local_links.inspect}\n"
           NethttpAb::RequestsQueue.new(local_links)
         else
