@@ -8,7 +8,11 @@ nethttp_ab -n100 -c3 http://www.yoursite.com
 OR simulate one user and follow all local links on the page:
 nethttp_ab -f http://localhost:3000
 
-simulate 3 users (all local links on the page will be visited once)
+OR simulate a user who will follow all inner links until depth 2
+that is [main_pages_links]:depth0 => [link1, link2, link3]:depth1 => [link11, link12, link21, link22, link31]:depth2
+nethttp_ab -f2 http://localhost:3000
+
+OR simulate 3 users (all local links on the page will be visited once)
 nethttp_ab --follow_links -c3 http://localhost:3000
 
 Issue tracker: https://github.com/german/nethttp_ab/issues

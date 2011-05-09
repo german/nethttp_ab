@@ -1,3 +1,7 @@
+v0.0.6 [09-05-2011]
+* added an ability to set a follow_links depth level to simulate a real user
+* refactored code a bit
+
 v0.0.5 [15-04-2011]
 * fixed issue #1 ("HTTP request path is empty")
 * following the redirect (if any) on the first request (using Net::HTTP.get_response instead of Net::HTTP::Get) so deleted net.rb file
