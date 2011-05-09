@@ -39,11 +39,12 @@ module NethttpAb
     def follow_links=(flag)
       @follow_links = flag
       # we could follow links on the pages if there's --follow-links=2 option
-      require 'nokogiri'  if @follow_links
+      require 'nokogiri' if @follow_links
     end
 
     def follow_links_depth=(depth)
-      @follow_links = depth
+      follow_links = true
+      @follow_links_depth = depth
     end
 
     def url=(link)
@@ -106,7 +107,7 @@ module NethttpAb
         local_links.uniq
       end
 
-      def fetch_links_from(url, max_depth = 1, current_depth = 0)
+      def fetch_links_from(url, max_depth = 1, current_depth = 1)
         local_links = []
 
         # get all links to benchmark as user behavior
@@ -138,7 +139,7 @@ module NethttpAb
             Net::HTTP.get_response(url)
         end
           
-        doc = Nokogiri::HTML(response.body)
+        doc = ::Nokogiri::HTML(response.body)
         links = select_local_links_from extract_links_from(doc), url
         local_links += links
 
@@ -148,7 +149,7 @@ module NethttpAb
           end
         end
 
-        local_links.reject{|l| l.empty?}.flatten
+        local_links.reject{|l| l.empty?}.flatten.uniq
       end
 
       def prepare_queue
