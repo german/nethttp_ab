@@ -176,26 +176,15 @@ module NethttpAb
 
       def start_threads
         @concurrent_users.times do
-          #begin
-          #  http_opened_session = get_http_session(@url)
-          #rescue OpenSSL::SSL::SSLError => e
-          #  puts "The url you provided is wrong, please check is it really ssl encrypted"
-          #  exit
-          #rescue Errno::ECONNREFUSED => e
-          #  puts "Connection error, please check your internet connection or make sure the server is responding"
-          #  exit
-          #rescue SocketError => e
-          #  puts e.message
-          #  exit
-          #end
-
           @threads << Thread.new do
             while !@requests_queue.empty? do
               # lock request in order to avoid sharing same request by two threads and making more requests then specified
               if next_url = @requests_queue.lock_next_request
                 req = if @follow_links
                   next_url_parsed = URI.parse(next_url)
-                  next_url_parsed.path = '/' if next_url_parsed.path == "" # ensure we requesting main page (if url is like http://google.com)
+
+                  # ensure that we are requesting main page (if url is like http://google.com)
+                  next_url_parsed.path = '/' if next_url_parsed.path == ""
                   next_url_parsed
                 else
                   @url
@@ -206,13 +195,21 @@ module NethttpAb
 
                 @total_time += Benchmark.realtime do
                   begin
-                    response = Net::HTTP.get_response(req) #http_opened_session.request(req)
-                    response = case response
+                    response_object = if 443 == req.port
+                      http = Net::HTTP.new(req.host, req.port)
+                      http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+                      http.use_ssl = true
+                      http.start{|agent| agent.get(req.path)}
+                    else
+                      Net::HTTP.get_response(req)
+                    end
+
+                    response = case response_object
                       when Net::HTTPSuccess
-                        response
+                        response_object
                       when Net::HTTPRedirection
-                        print "redirected to #{response['location']}\n"
-                        Net::HTTP.get_response(URI.parse(response['location']))
+                        print "redirected to #{response_object['location']}\n"
+                        Net::HTTP.get_response(URI.parse(response_object['location']))
                     end
                     
                     print '.' # show progress while processing queue
